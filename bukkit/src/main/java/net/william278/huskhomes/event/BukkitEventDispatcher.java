@@ -69,7 +69,13 @@ public interface BukkitEventDispatcher extends EventDispatcher {
     @Override
     default @NotNull ISendTeleportRequestEvent getSendTeleportRequestEvent(@NotNull OnlineUser sender,
                                                                            @NotNull TeleportRequest request) {
-        return new SendTeleportRequestEvent(sender, request);
+        return getSendTeleportRequestEvent(sender, request, true);
+    }
+
+    @Override
+    default @NotNull ISendTeleportRequestEvent getSendTeleportRequestEvent(@NotNull OnlineUser sender,
+                                                                           @NotNull TeleportRequest request, boolean internal) {
+        return new SendTeleportRequestEvent(sender, request, internal);
     }
 
     @Override
@@ -82,6 +88,13 @@ public interface BukkitEventDispatcher extends EventDispatcher {
     default @NotNull IReplyTeleportRequestEvent getReplyTeleportRequestEvent(@NotNull OnlineUser recipient,
                                                                              @NotNull TeleportRequest request) {
         return new ReplyTeleportRequestEvent(recipient, request);
+    }
+
+    @Override
+    default @NotNull IReplyTeleportRequestEvent getReplyTeleportRequestEvent(@NotNull OnlineUser recipient,
+                                                                             @NotNull TeleportRequest request,
+                                                                             boolean internal) {
+        return new ReplyTeleportRequestEvent(recipient, request, internal);
     }
 
     @Override

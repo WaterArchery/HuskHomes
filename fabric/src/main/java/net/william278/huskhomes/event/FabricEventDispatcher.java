@@ -86,6 +86,12 @@ public interface FabricEventDispatcher extends EventDispatcher {
     }
 
     @Override
+    default @NotNull ISendTeleportRequestEvent getSendTeleportRequestEvent(@NotNull OnlineUser sender,
+                                                                           @NotNull TeleportRequest request, boolean internal) {
+        return SendTeleportRequestCallback.SUPPLIER.apply(sender, request);
+    }
+
+    @Override
     default @NotNull IReceiveTeleportRequestEvent getReceiveTeleportRequestEvent(@NotNull OnlineUser recipient,
                                                                                  @NotNull TeleportRequest request) {
         return ReceiveTeleportRequestCallback.SUPPLIER.apply(recipient, request);
@@ -94,6 +100,12 @@ public interface FabricEventDispatcher extends EventDispatcher {
     @Override
     default @NotNull IReplyTeleportRequestEvent getReplyTeleportRequestEvent(@NotNull OnlineUser recipient,
                                                                              @NotNull TeleportRequest request) {
+        return ReplyTeleportRequestCallback.SUPPLIER.apply(recipient, request);
+    }
+
+    @Override
+    default @NotNull IReplyTeleportRequestEvent getReplyTeleportRequestEvent(@NotNull OnlineUser recipient,
+                                                                             @NotNull TeleportRequest request, boolean internal) {
         return ReplyTeleportRequestCallback.SUPPLIER.apply(recipient, request);
     }
 

@@ -19,6 +19,7 @@
 
 package net.william278.huskhomes.event;
 
+import lombok.Getter;
 import net.william278.huskhomes.teleport.TeleportRequest;
 import net.william278.huskhomes.user.OnlineUser;
 import org.bukkit.event.Event;
@@ -31,11 +32,18 @@ public class ReplyTeleportRequestEvent extends Event implements IReplyTeleportRe
 
     private final TeleportRequest request;
     private final OnlineUser recipient;
+    @Getter
+    private final boolean internal;
     private boolean cancelled;
 
     public ReplyTeleportRequestEvent(@NotNull OnlineUser recipient, @NotNull TeleportRequest teleport) {
+        this(recipient, teleport, true);
+    }
+
+    public ReplyTeleportRequestEvent(@NotNull OnlineUser recipient, @NotNull TeleportRequest teleport, boolean internal) {
         this.request = teleport;
         this.recipient = recipient;
+        this.internal = internal;
     }
 
     @Override

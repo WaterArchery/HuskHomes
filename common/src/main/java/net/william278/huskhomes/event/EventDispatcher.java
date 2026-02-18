@@ -83,12 +83,20 @@ public interface EventDispatcher {
     ISendTeleportRequestEvent getSendTeleportRequestEvent(@NotNull OnlineUser sender, @NotNull TeleportRequest request);
 
     @NotNull
+    ISendTeleportRequestEvent getSendTeleportRequestEvent(@NotNull OnlineUser sender, @NotNull TeleportRequest request, boolean internal);
+
+    @NotNull
     IReceiveTeleportRequestEvent getReceiveTeleportRequestEvent(@NotNull OnlineUser recipient,
                                                                 @NotNull TeleportRequest request);
 
     @NotNull
     IReplyTeleportRequestEvent getReplyTeleportRequestEvent(@NotNull OnlineUser recipient,
                                                             @NotNull TeleportRequest request);
+
+    @NotNull
+    IReplyTeleportRequestEvent getReplyTeleportRequestEvent(@NotNull OnlineUser recipient,
+                                                            @NotNull TeleportRequest request,
+                                                            boolean internal);
 
     @NotNull
     IHomeCreateEvent getHomeCreateEvent(@NotNull User owner, @NotNull String name, @NotNull Position position,

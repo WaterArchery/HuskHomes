@@ -48,10 +48,10 @@ public class TpRespondCommand extends InGameCommand implements UserListTabComple
     public void execute(@NotNull OnlineUser executor, @NotNull String[] args) {
         final Optional<String> requesterName = parseStringArg(args, 0);
         if (requesterName.isPresent()) {
-            plugin.getManager().requests().respondToTeleportRequestBySenderName(executor, requesterName.get(), accept);
+            plugin.getManager().requests().respondToTeleportRequestBySenderName(executor, requesterName.get(), accept, true);
             return;
         }
-        plugin.getManager().requests().respondToTeleportRequest(executor, accept);
+        plugin.getManager().requests().respondToTeleportRequest(executor, accept, true);
     }
 
 }

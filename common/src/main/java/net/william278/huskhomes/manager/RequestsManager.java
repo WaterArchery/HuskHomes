@@ -139,16 +139,21 @@ public class RequestsManager {
                 .build().send(b, requester));
     }
 
-    /**
-     * Sends a teleport request of the given type to the specified user, by name, if they exist.
-     *
-     * @param requester  The user making the request
-     * @param targetUser The user to send the request to
-     * @param type       The type of request to send
-     * @param callback   A callback to run after the request has been sent (and the event has not been cancelled)
-     */
     public void sendTeleportRequest(@NotNull OnlineUser requester, @NotNull String targetUser,
                                     @NotNull TeleportRequest.Type type, @NotNull Runnable callback) throws IllegalArgumentException {
+        sendTeleportRequest(requester, targetUser, type, callback, true);
+    }
+
+        /**
+         * Sends a teleport request of the given type to the specified user, by name, if they exist.
+         *
+         * @param requester  The user making the request
+         * @param targetUser The user to send the request to
+         * @param type       The type of request to send
+         * @param callback   A callback to run after the request has been sent (and the event has not been cancelled)
+         */
+    public void sendTeleportRequest(@NotNull OnlineUser requester, @NotNull String targetUser,
+                                    @NotNull TeleportRequest.Type type, @NotNull Runnable callback, boolean internal) throws IllegalArgumentException {
         final long expiry = Instant.now().getEpochSecond()
                 + plugin.getSettings().getGeneral().getTeleportRequestExpiryTime();
         final TeleportRequest request = new TeleportRequest(requester, type, expiry);
@@ -164,7 +169,7 @@ public class RequestsManager {
             if (localTarget.get().isVanished()) {
                 throw new IllegalArgumentException("Cannot send a teleport request to a vanished player");
             }
-            plugin.fireEvent(plugin.getSendTeleportRequestEvent(requester, request),
+            plugin.fireEvent(plugin.getSendTeleportRequestEvent(requester, request, internal),
                     (event -> {
                         sendLocalTeleportRequest(request, localTarget.get());
                         callback.run();
@@ -175,7 +180,7 @@ public class RequestsManager {
         // If the player couldn't be found locally, send the request cross-server
         if (plugin.getSettings().getCrossServer().isEnabled()) {
             plugin.fireEvent(
-                    plugin.getSendTeleportRequestEvent(requester, request),
+                    plugin.getSendTeleportRequestEvent(requester, request, internal),
                     (event -> {
                         plugin.getBroker().ifPresent(b -> Message.builder()
                                 .type(Message.MessageType.TELEPORT_REQUEST)
@@ -235,7 +240,7 @@ public class RequestsManager {
      * @param accepted   Whether the request was accepted or not
      */
     public void respondToTeleportRequestBySenderName(@NotNull OnlineUser recipient, @NotNull String senderName,
-                                                     boolean accepted) {
+                                                     boolean accepted, boolean internal) {
         // Check the recipient is not ignoring teleport requests
         if (isIgnoringRequests(recipient)) {
             plugin.getLocales().getLocale("error_ignoring_teleport_requests")
@@ -250,7 +255,7 @@ public class RequestsManager {
                     .ifPresent(recipient::sendMessage);
             return;
         }
-        handleRequestResponse(namedRequest.get(), recipient, accepted);
+        handleRequestResponse(namedRequest.get(), recipient, accepted, internal);
     }
 
     /**
@@ -259,7 +264,7 @@ public class RequestsManager {
      * @param recipient The user receiving the request
      * @param accepted  Whether the request should be accepted or not
      */
-    public void respondToTeleportRequest(@NotNull OnlineUser recipient, boolean accepted) {
+    public void respondToTeleportRequest(@NotNull OnlineUser recipient, boolean accepted, boolean internal) {
         // Check the recipient is not ignoring teleport requests
         if (isIgnoringRequests(recipient)) {
             plugin.getLocales().getLocale("error_ignoring_teleport_requests")
@@ -280,7 +285,7 @@ public class RequestsManager {
             return;
         }
 
-        handleRequestResponse(lastRequest.get(), recipient, accepted);
+        handleRequestResponse(lastRequest.get(), recipient, accepted, internal);
     }
 
     /**
@@ -291,19 +296,22 @@ public class RequestsManager {
      * @param accepted  Whether the request should be accepted or not
      */
     private void handleRequestResponse(@NotNull TeleportRequest request, @NotNull OnlineUser recipient,
-                                       boolean accepted) {
+                                       boolean accepted, boolean internal) {
         // Remove the request(s) from the sender from the recipient's queue
-        removeTeleportRequest(request.getRequesterName(), recipient);
+        if (!internal)
+            removeTeleportRequest(request.getRequesterName(), recipient);
 
         // Check if the request has expired
         if (request.hasExpired()) {
             plugin.getLocales().getLocale("error_teleport_request_expired").ifPresent(recipient::sendMessage);
             return;
         }
-        request.setStatus(accepted ? TeleportRequest.Status.ACCEPTED : TeleportRequest.Status.DECLINED);
+
+        if (!internal)
+            request.setStatus(accepted ? TeleportRequest.Status.ACCEPTED : TeleportRequest.Status.DECLINED);
 
         // Fire event and send request response confirmation to the recipient
-        plugin.fireEvent(plugin.getReplyTeleportRequestEvent(recipient, request), (event -> {
+        plugin.fireEvent(plugin.getReplyTeleportRequestEvent(recipient, request, internal), (event -> {
             plugin.getLocales().getLocale(
                     "teleport_request_" + (accepted ? "accepted" : "declined") + "_confirmation",
                     request.getRequesterName()
