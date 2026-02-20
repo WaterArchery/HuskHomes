@@ -233,6 +233,16 @@ public class RedisBroker extends PluginMessageBroker {
                     return;
                 }
 
+                if (message.getType() == Message.MessageType.REQUEST_API_RTP_LOCATION) {
+                    broker.handleApiRtpRequestLocation(message);
+                    return;
+                }
+
+                if (message.getType() == Message.MessageType.API_RTP_LOCATION) {
+                    broker.handleApiRtpLocation(message);
+                    return;
+                }
+
                 broker.plugin.getOnlineUsers().stream()
                         .findAny()
                         .ifPresent(receiver -> broker.handle(receiver, message));

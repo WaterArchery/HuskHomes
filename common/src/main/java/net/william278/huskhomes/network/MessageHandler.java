@@ -20,10 +20,8 @@
 package net.william278.huskhomes.network;
 
 import net.william278.huskhomes.HuskHomes;
-import net.william278.huskhomes.position.Home;
-import net.william278.huskhomes.position.Position;
-import net.william278.huskhomes.position.Warp;
-import net.william278.huskhomes.position.World;
+import net.william278.huskhomes.api.BaseHuskHomesAPI;
+import net.william278.huskhomes.position.*;
 import net.william278.huskhomes.teleport.Teleport;
 import net.william278.huskhomes.user.OnlineUser;
 import net.william278.huskhomes.user.User;
@@ -31,9 +29,12 @@ import net.william278.huskhomes.util.TransactionResolver;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
 public interface MessageHandler {
 
@@ -151,6 +152,68 @@ public interface MessageHandler {
                 .actions(TransactionResolver.Action.RANDOM_TELEPORT)
                 .target(position.get())
                 .buildAndComplete(true);
+    }
+
+    default void handleApiRtpRequestLocation(@NotNull Message message) {
+        HuskHomes plugin = getPlugin();
+        plugin.log(Level.INFO, "Received API RTP location request: " + message.getPayload().getString().orElse("<invalid>"));
+        String raw = message.getPayload().getString().orElse("");
+        String[] parts = raw.split("\0");
+        if (parts.length != 3) {
+            getPlugin().log(Level.WARNING, "Invalid API RTP location request payload: " + raw);
+            return;
+        }
+
+        String requestId = parts[0];
+        int count = Integer.parseInt(parts[1]);
+        String worldName = parts[2];
+
+        World world = plugin.getWorlds().stream().filter(w -> w.getName().equalsIgnoreCase(worldName)).findFirst().orElse(null);
+        plugin.getRandomTeleportEngine().getRandomPosition(world, new String[0]).thenAccept(position -> {
+            if (position.isPresent()) {
+                List<CompletableFuture<Optional<Location>>> futurePositions = new ArrayList<>();
+                for (int i = 0; i < count; i++) {
+                    Position randomized = randomizeAroundPosition(position.get());
+                    futurePositions.add(plugin.findSafeGroundLocation(randomized));
+                }
+
+                CompletableFuture.allOf(futurePositions.toArray(new CompletableFuture[0])).thenAccept(v -> {
+                    List<Location> safeLocations = new ArrayList<>();
+                    for (CompletableFuture<Optional<Location>> future : futurePositions)
+                        future.join().ifPresent(safeLocations::add);
+
+                    List<Position> safePositions = new ArrayList<>();
+                    for (Location safeLocation : safeLocations)
+                        safePositions.add(Position.at(safeLocation.getX(), safeLocation.getY(),
+                                safeLocation.getZ(), safeLocation.getWorld(), plugin.getServerName()));
+
+                    plugin.log(Level.INFO, "Found " + safeLocations.size() + " safe locations for API RTP request: " + requestId);
+                    Message.builder().type(Message.MessageType.API_RTP_LOCATION)
+                            .target(message.getSourceServer(), Message.TargetType.SERVER)
+                            .payload(Payload.rtpLocation(requestId, safePositions))
+                            .build().send(getBroker(), null);
+                });
+            } else {
+                plugin.log(Level.WARNING, "Failed to get RTP location for API request: " + requestId);
+                Message.builder().type(Message.MessageType.API_RTP_LOCATION)
+                        .target(message.getSourceServer(), Message.TargetType.SERVER)
+                        .payload(Payload.rtpLocation(requestId, new ArrayList<>()))
+                        .build().send(getBroker(), null);
+            }
+        });
+    }
+
+    private Position randomizeAroundPosition(Position position) {
+        double radius = 15;
+        double x = position.getX() + (Math.random() * 2 - 1) * radius;
+        double y = position.getY();
+        double z = position.getZ() + (Math.random() * 2 - 1) * radius;
+        return Position.at(x, y, z, position.getWorld(), position.getServer());
+    }
+
+    default void handleApiRtpLocation(@NotNull Message message) {
+        message.getPayload().getString().ifPresent(requestId -> BaseHuskHomesAPI.getInstance()
+                .completeRtpLocationRequest(requestId, message.getPayload().getPositionList().orElse(new ArrayList<>())));
     }
 
     default void handleUpdateCaches() {

@@ -55,6 +55,10 @@ public class Payload {
     @Expose
     @SerializedName("user_list")
     private List<User> userList;
+    @Nullable
+    @Expose
+    @SerializedName("position_list")
+    private List<Position> positionList;
 
     @NotNull
     public static Payload empty() {
@@ -96,6 +100,14 @@ public class Payload {
         return payload;
     }
 
+    @NotNull
+    public static Payload rtpLocation(@Nullable String id, @Nullable List<Position> positions) {
+        final Payload payload = new Payload();
+        payload.string = id;
+        payload.positionList = positions;
+        return payload;
+    }
+
     public Optional<String> getString() {
         return Optional.ofNullable(string);
     }
@@ -114,6 +126,10 @@ public class Payload {
 
     public Optional<List<User>> getUserList() {
         return Optional.ofNullable(userList);
+    }
+
+    public Optional<List<Position>> getPositionList() {
+        return Optional.ofNullable(positionList);
     }
 
 }

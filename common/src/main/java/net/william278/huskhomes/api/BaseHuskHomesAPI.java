@@ -43,6 +43,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -67,6 +68,8 @@ public class BaseHuskHomesAPI {
      * <b>(Internal use only</b> - Random integer for RTP.
      */
     private final Random random = new Random();
+
+    private final Map<String, CompletableFuture<List<Position>>> pendingRtpRequests = new ConcurrentHashMap<>();
 
     /**
      * <b>(Internal use only)</b> - Constructor, instantiating the base API class.
@@ -896,6 +899,25 @@ public class BaseHuskHomesAPI {
      */
     public final void randomlyTeleportPlayerLocally(@NotNull OnlineUser user) {
         this.randomlyTeleportPlayerLocally(user, false);
+    }
+
+    public final CompletableFuture<List<Position>> getRtpLocation(String serverName, String worldName, int count) {
+        CompletableFuture<List<Position>> future = new CompletableFuture<>();
+        String id = UUID.randomUUID().toString();
+        pendingRtpRequests.put(id, future);
+        plugin.getBroker().ifPresent(b ->
+                Message.builder()
+                        .type(Message.MessageType.REQUEST_API_RTP_LOCATION)
+                        .target(serverName, Message.TargetType.SERVER)
+                        .payload(Payload.string(id + "\0" + count + "\0" + worldName))
+                        .build().send(b, null)
+        );
+        return future;
+    }
+
+    public void completeRtpLocationRequest(String requestId, List<Position> position) {
+        CompletableFuture<List<Position>> future = pendingRtpRequests.remove(requestId);
+        if (future != null) future.complete(position);
     }
 
     /**

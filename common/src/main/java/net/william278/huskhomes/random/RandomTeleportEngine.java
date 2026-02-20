@@ -34,7 +34,7 @@ public abstract class RandomTeleportEngine {
 
     protected final HuskHomes plugin;
     public final String name;
-    public long maxAttempts = 12;
+    public long maxAttempts = 100;
 
     /**
      * Constructor for a random teleport engine.

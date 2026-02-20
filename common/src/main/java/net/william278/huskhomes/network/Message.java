@@ -156,6 +156,8 @@ public class Message {
         UPDATE_CACHES,
         REQUEST_RTP_LOCATION,
         RTP_LOCATION,
+        REQUEST_API_RTP_LOCATION,
+        API_RTP_LOCATION,
     }
 
 }
