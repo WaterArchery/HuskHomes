@@ -48,10 +48,10 @@ public final class NormalDistributionEngine extends RandomTeleportEngine {
         this.standardDeviation = plugin.getSettings().getRtp().getDistributionStandardDeviation();
 
         if (plugin.getSettings().getRtp().isCrossServer()
-                && (plugin.getSettings().getCrossServer().isEnabled()
-                && plugin.getSettings().getCrossServer().getBrokerType() != Broker.Type.REDIS)) {
+            && (plugin.getSettings().getCrossServer().isEnabled()
+            && plugin.getSettings().getCrossServer().getBrokerType() != Broker.Type.REDIS)) {
             plugin.log(Level.WARNING, "Cross-server /rtp support has been disabled as "
-                    + "a REDIS message broker is required for this feature.");
+                + "a REDIS message broker is required for this feature.");
         }
     }
 
@@ -59,8 +59,8 @@ public final class NormalDistributionEngine extends RandomTeleportEngine {
     private static int determineSpawnRadius(int radius, int spawnRadius, @NotNull HuskHomes plugin) {
         if (spawnRadius >= radius) {
             plugin.log(Level.WARNING, "The RTP spawn radius is greater than or equal to the RTP radius. "
-                    + "This will result in the RTP engine being unable to find a suitable location to teleport to. "
-                    + "Please set the RTP spawn radius to a value less than the RTP radius.");
+                + "This will result in the RTP engine being unable to find a suitable location to teleport to. "
+                + "Please set the RTP spawn radius to a value less than the RTP radius.");
             return radius - 1;
         }
         return spawnRadius;
@@ -85,10 +85,10 @@ public final class NormalDistributionEngine extends RandomTeleportEngine {
         final float x = (float) (radius * Math.sin(angle));
 
         return Location.at(
-                Math.round(origin.getX()) + x,
-                128d,
-                Math.round(origin.getZ()) + z,
-                origin.getWorld()
+            Math.round(origin.getX()) + x,
+            128d,
+            Math.round(origin.getZ()) + z,
+            origin.getWorld()
         );
     }
 
@@ -100,8 +100,8 @@ public final class NormalDistributionEngine extends RandomTeleportEngine {
      */
     private CompletableFuture<Optional<Location>> generateSafeLocation(@NotNull World world) {
         return plugin.findSafeGroundLocation(generateLocation(
-                getCenterPoint(world), mean, standardDeviation,
-                radius.getMin(), radius.getMax()
+            getCenterPoint(world), mean, standardDeviation,
+            radius.getMin(), radius.getMax()
         ));
     }
 
@@ -131,17 +131,20 @@ public final class NormalDistributionEngine extends RandomTeleportEngine {
 
     @Override
     public CompletableFuture<Optional<Position>> getRandomPosition(@NotNull World world, @NotNull String[] args) {
-        CompletableFuture<Optional<Position>> future = generateSafeLocation(world)
-                .thenApply(loc -> loc.map(resolved -> Position.at(resolved, plugin.getServerName())));
-        for (int i = 1; i <= maxAttempts; i++) {
-            future = future.thenCompose(result -> {
-                if (result.isPresent()) {
-                    return CompletableFuture.completedFuture(result);
-                }
-                return generateSafeLocation(world)
-                        .thenApply(loc -> loc.map(resolved -> Position.at(resolved, plugin.getServerName())));
-            });
+        return attemptRandomPosition(world, 0);
+    }
+
+    private CompletableFuture<Optional<Position>> attemptRandomPosition(@NotNull World world, int attempt) {
+        if (attempt > maxAttempts) {
+            return CompletableFuture.completedFuture(Optional.empty());
         }
-        return future;
+        return generateSafeLocation(world).thenCompose(location -> {
+            if (location.isPresent()) {
+                return CompletableFuture.completedFuture(
+                    location.map(resolved -> Position.at(resolved, plugin.getServerName()))
+                );
+            }
+            return attemptRandomPosition(world, attempt + 1);
+        });
     }
 }
